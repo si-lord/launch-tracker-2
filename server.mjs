@@ -504,6 +504,12 @@ process.on('unhandledRejection', (reason) => {
   console.error('[launch-tracker] unbehandelte Promise:', reason)
 })
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[launch-tracker] serving ${ROOT} on 0.0.0.0:${PORT}`)
+// Bind-Adresse: standardmaessig nur das Loopback-Interface. Ueber nginx
+// (Port 443) laeuft der Dienst mit TLS; ein direkt erreichbarer HTTP-Port
+// waere ein zweiter Weg an TLS und den Security-Headern vorbei.
+// HOST=0.0.0.0 stellt das alte Verhalten wieder her.
+const HOST = process.env.HOST ?? '127.0.0.1'
+
+server.listen(PORT, HOST, () => {
+  console.log(`[launch-tracker] serving ${ROOT} on ${HOST}:${PORT}`)
 })
