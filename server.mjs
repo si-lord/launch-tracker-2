@@ -56,6 +56,19 @@ const ICS_FILE = join(DATA_DIR, 'feed.ics')
 /** Ab dieser Groesse lohnt sich gzip auf der Leitung. */
 const GZIP_FROM_BYTES = 4096
 
+/**
+ * Frische-Schwellen fuer /api/health.
+ *
+ * Ohne diese Grenzen sah ein Wochen alter Datenstand gesund aus: der
+ * Health-Endpunkt meldete nur, OB eine Datei existiert. Genau daran ist
+ * der Ausfall der Video-Kette (RSS antwortet seit 14.11. mit 404) wochenlang
+ * unbemerkt geblieben.
+ *
+ * Ueber die Umgebung uebersteuerbar: MAX_DATA_AGE_S, MAX_VIDEO_AGE_S.
+ */
+const MAX_DATA_AGE_S = Number.parseInt(process.env.MAX_DATA_AGE_S ?? '21600', 10) // 6 Stunden
+const MAX_VIDEO_AGE_S = Number.parseInt(process.env.MAX_VIDEO_AGE_S ?? '43200', 10) // 12 Stunden
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -353,14 +366,19 @@ function videoStatus() {
     } catch {
       summary = null
     }
+    const ageSeconds = Math.round((Date.now() - stat.mtimeMs) / 1000)
     return {
       file: VIDEO_LINK_FILE,
       bytes: stat.size,
-      ageSeconds: Math.round((Date.now() - stat.mtimeMs) / 1000),
+      ageSeconds,
+      stale: ageSeconds > MAX_VIDEO_AGE_S,
+      maxAgeSeconds: MAX_VIDEO_AGE_S,
       summary,
     }
   } catch {
-    return { file: VIDEO_LINK_FILE, present: false }
+    // Keine Zuordnung vorhanden: das ist kein Veralten, sondern ein fehlender
+    // Zustand. Wird deshalb nicht als stale gewertet.
+    return { file: VIDEO_LINK_FILE, present: false, stale: false }
   }
 }
 
@@ -375,14 +393,27 @@ function serveHealth(req, res) {
     } catch {
       summary = null
     }
+    const ageSeconds = Math.round((Date.now() - stat.mtimeMs) / 1000)
+    const videos = videoStatus()
+    const stale = ageSeconds > MAX_DATA_AGE_S
     payload = {
-      ok: true,
+      // ok ist nur true, wenn die Daten aktuell sind. Ein veralteter Stand
+      // ist ein Ausfall, kein Erfolg - der Deploy bricht dann ab.
+      ok: !stale && !videos.stale,
       port: PORT,
       dataFile: DATA_FILE,
       dataBytes: stat.size,
-      dataAgeSeconds: Math.round((Date.now() - stat.mtimeMs) / 1000),
+      dataAgeSeconds: ageSeconds,
+      dataMaxAgeSeconds: MAX_DATA_AGE_S,
+      stale,
       summary,
-      videos: videoStatus(),
+      videos,
+    }
+    if (stale) {
+      payload.hint = `Startdaten sind ${ageSeconds} s alt (Grenze ${MAX_DATA_AGE_S} s). Cronjob laeuft?`
+    }
+    if (videos.stale) {
+      payload.hint = `${payload.hint ? payload.hint + ' ' : ''}Video-Zuordnung ist ${videos.ageSeconds} s alt (Grenze ${MAX_VIDEO_AGE_S} s). RSS-Feed?`
     }
   } catch {
     payload = {
