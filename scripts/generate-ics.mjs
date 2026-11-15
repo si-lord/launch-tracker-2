@@ -14,7 +14,7 @@
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..')
@@ -201,7 +201,16 @@ async function main() {
   process.exit(0)
 }
 
-main().catch((e) => {
-  console.error('[ics] Unerwarteter Fehler:', e)
-  process.exit(1)
-})
+// Nur schreiben, wenn das Skript direkt aufgerufen wurde. Beim Import
+// (Test) bleibt die Datei unangetastet - sonst wuerde ein Testlauf den
+// Live-Feed leeren.
+const istDirektaufruf =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+
+if (istDirektaufruf) {
+  main().catch((e) => {
+    console.error('[ics] Unerwarteter Fehler:', e)
+    process.exit(1)
+  })
+}

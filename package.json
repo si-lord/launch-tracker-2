@@ -1,0 +1,21 @@
+{
+  "name": "launch-tracker-2-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Launch-Tracker 2: Datensketten, statischer Server und Kalender-Feed. Die App-Oberflaeche liegt als gebautes Bundle in www/ (Quellbaum siehe /home/silord/projects/launch-tracker-recovered).",
+  "scripts": {
+    "test": "node --test scripts/core.test.mjs",
+    "refresh": "node scripts/refresh-data.mjs",
+    "refresh-videos": "node scripts/refresh-videos.mjs",
+    "ics": "node scripts/generate-ics.mjs",
+    "precompress": "node scripts/precompress.mjs",
+    "check:precompress": "node scripts/precompress.mjs --check",
+    "serve": "PORT=9001 node server.mjs www",
+    "deploy": "bash scripts/deploy-to-webserver.sh",
+    "deploy:dry": "bash scripts/deploy-to-webserver.sh --dry-run"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
