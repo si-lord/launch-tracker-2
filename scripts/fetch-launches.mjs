@@ -34,7 +34,7 @@ import { computeWindow } from './lib/window.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..')
-const OUT_DEFAULT = resolve(ROOT, 'src/data/launches.json')
+const OUT_DEFAULT = resolve(ROOT, 'data', 'launches.json')
 
 /** Ausgabeort: --out <pfad> schlaegt den Standardpfad. */
 function resolveOut() {
@@ -480,12 +480,42 @@ async function main() {
   if (fromFile) {
     payload = JSON.parse(await readFile(fromFile, 'utf8'))
   } else {
-    const res = await fetch(API, { headers: { 'User-Agent': 'launch-tracker-build-script' } })
-    if (!res.ok) throw new Error(`API antwortete mit ${res.status}`)
-    payload = await res.json()
+    // Fetch mit Timeout (8s) und Retry (2x, exponentieller Backoff 1s/2s)
+    const MAX_RETRIES = 2
+    const TIMEOUT_MS = 8000
+    let lastError
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS)
+        const res = await fetch(API, {
+          headers: { 'User-Agent': 'launch-tracker-build-script' },
+          signal: controller.signal
+        })
+        clearTimeout(timeout)
+        if (!res.ok) throw new Error(`API antwortete mit ${res.status}`)
+        payload = await res.json()
+        break
+      } catch (err) {
+        lastError = err
+        if (attempt < MAX_RETRIES) {
+          const wait = 1000 * Math.pow(2, attempt)  // 1s, 2s
+          console.warn(`[fetch-launches] API-Fehler (Versuch ${attempt + 1}/${MAX_RETRIES + 1}): ${err.message}. Warte ${wait}ms...`)
+          await new Promise(r => setTimeout(r, wait))
+        }
+      }
+    }
+    if (!payload) throw lastError
   }
 
   const results = Array.isArray(payload?.results) ? payload.results : []
+  // Pagination-Guard: API liefert limit=100, bei genau 100 Ergebnissen koennten
+  // weitere Seiten existieren. Wir brechen hier bewusst ab (fail-closed) statt
+  // einen unvollstaendigen Datensatz zu akzeptieren. --force ueberspringt den Guard.
+  const FORCE_PAGINATION = process.argv.includes('--force-pagination')
+  if (!FORCE_PAGINATION && results.length >= 100) {
+    throw new Error(`API liefert ${results.length} Ergebnisse (limit=100). Moeglicherweise unvollstaendig (weitere Seiten). Nutze --force-pagination um trotzdem fortzufahren.`)
+  }
   const launches = transform(results).sort((a, b) => a.net.localeCompare(b.net))
 
   const withStages = launches.filter((l) => l.rocket.stages.length > 0).length
