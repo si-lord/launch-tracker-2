@@ -18,10 +18,11 @@
 set -uo pipefail
 
 SRC="/home/silord/projects/launch-tracker-2"
-DST_HOST="root@192.168.11.119"
+# Ziel laeuft als silord (Key-Auth via ~/.ssh/config), sudo fuer Systemzugriff.
+DST_HOST="silord@192.168.11.119"
 DST="/home/silord/WebServer/launch-tracker-2"
-SSH="sshpass -p 'Ness2002#' ssh -o StrictHostKeyChecking=no"
-SCP="sshpass -p 'Ness2002#' scp -q -o StrictHostKeyChecking=no"
+SSH="ssh -o BatchMode=yes -o ConnectTimeout=10"
+SCP="scp -q -o BatchMode=yes -o ConnectTimeout=10"
 
 log() { printf '%s | %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 fail() { log "FEHLER: $*"; exit 1; }
@@ -37,25 +38,17 @@ log "Source: $COMMIT (branch $(git rev-parse --abbrev-ref HEAD))"
 
 # ---------------------------------------------------------------- 2. Remote-Daten sichern
 log "Sichere Live-Daten auf $DST_HOST"
-$SSH "$DST_HOST" "set -e
-  cd '$DST'
-  ts=\$(date +%Y%m%d-%H%M%S)
-  tar czf '/home/silord/launch-tracker-2-predeploy-'\"\$ts\"'.tar.gz' www scripts server.mjs 2>/dev/null || true
-  echo \"  Backup: /home/silord/launch-tracker-2-predeploy-\$ts.tar.gz\"
-" || fail "Remote-Backup fehlgeschlagen"
+$SSH "$DST_HOST" "cd '$DST' && ts=\$(date +%Y%m%d-%H%M%S) && tar czf /home/silord/launch-tracker-2-predeploy-\$ts.tar.gz www scripts server.mjs 2>/dev/null; echo Backup: /home/silord/launch-tracker-2-predeploy-\$ts.tar.gz" \
+  || fail "Remote-Backup fehlgeschlagen"
 
 # ---------------------------------------------------------------- 3. Spiegeln
 log "Spiegele www/, scripts/, server.mjs nach $DST_HOST"
 $SCP -r "$SRC/www" "$SRC/scripts" "$SRC/server.mjs" "$DST_HOST:$DST/" \
-  || fail "rsync/scp fehlgeschlagen"
+  || fail "scp fehlgeschlagen"
 
 log "Restarte launch-tracker-2.service"
-$SSH "$DST_HOST" "set -e
-  systemctl restart launch-tracker-2.service
-  sleep 3
-  systemctl is-active launch-tracker-2.service
-  systemctl show launch-tracker-2.service -p ExecMainStartTimestamp
-" || fail "Service-Restart fehlgeschlagen"
+$SSH "$DST_HOST" "sudo -n systemctl restart launch-tracker-2.service && sleep 3 && systemctl is-active launch-tracker-2.service && sudo -n systemctl show launch-tracker-2.service -p ExecMainStartTimestamp" \
+  || fail "Service-Restart fehlgeschlagen"
 
 # ---------------------------------------------------------------- 4. Verify
 log "Health-Check"
