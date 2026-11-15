@@ -1,0 +1,67 @@
+{
+  "name": "Launch-Tracker",
+  "short_name": "Launch-Tracker",
+  "description": "Raketenstarts des vergangenen und des kommenden Monats – als Karte, Globus, Zeitachse und Auswertung. Vollständig offline nutzbar.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
+  "categories": ["news", "education", "utilities"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Karte",
+      "short_name": "Karte",
+      "url": "./?view=2d",
+      "description": "Startplätze auf der 2D-Karte"
+    },
+    {
+      "name": "Globus",
+      "short_name": "Globus",
+      "url": "./?view=3d",
+      "description": "Startplätze auf dem 3D-Globus mit Tag/Nacht-Grenze"
+    },
+    {
+      "name": "Statistik",
+      "short_name": "Statistik",
+      "url": "./?view=stats",
+      "description": "Auswertung des Beobachtungsfensters"
+    }
+  ]
+}

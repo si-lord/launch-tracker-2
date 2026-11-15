@@ -1,0 +1,20 @@
+# Live-Daten: werden per Cron neu erzeugt (refresh-data.mjs / refresh-videos.mjs)
+data/*.json
+data/*.json.bak-*
+data/*.json.status.json
+data/*.json.tmp-*
+
+# Vorkomprimierte Varianten der Assets: aus den .js/.css ableitbar, nicht versionieren
+www/**/*.br
+www/**/*.gz
+
+# Logs / lokale Zustände
+*.log
+*.status.json
+.DS_Store
+node_modules/
+
+# WICHTIG: www/assets/*.js und *.css sind bewusst NICHT ignoriert.
+# Das sind die ausgelieferten Bundles der App. Der Original-Quellbaum (src/)
+# ist nicht mehr auffindbar; diese Dateien sind die letzte existierende
+# Kopie des Anwendungscodes und muessen im Repo liegen.

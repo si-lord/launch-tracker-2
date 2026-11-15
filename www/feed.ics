@@ -1,0 +1,90 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//launch-tracker//Raketenstarts//DE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Launch-Tracker (Raketenstarts)
+X-WR-CALDESC:Geplante Starts im Beobachtungsfenster 04.09.2026 – 18.10.20
+ 26
+REFRESH-INTERVAL;VALUE=DURATION:PT12H
+X-PUBLISHED-TTL:PT12H
+BEGIN:VEVENT
+UID:da43dc2c-00af-4cc1-8ef1-90a60b2eb9e5@launch-tracker.local
+DTSTAMP:20261004T173940Z
+DTSTART:20261005T081700Z
+DTEND:20261005T091700Z
+SUMMARY:Falcon 9 Block 5 | SDA Tranche 1 Transport Layer A
+LOCATION:Space Launch Complex 4E\, Vandenberg SFB\, CA\, USA\, United State
+ s of America
+DESCRIPTION:Rakete: Falcon 9 Block 5\nAnbieter: SpaceX SpX\nMission: SDA Tr
+ anche 1 Transport Layer A\nNutzlast: SDA Tranche 1 Transport Layer A\nStat
+ us: Go for Launch\nÜbertragung: https://x.com/i/broadcasts/1oJMvNEQewoxQ\
+ nQuelle: https://www.spacex.com/launches/sda-t1tl-a
+STATUS:CONFIRMED
+URL:https://www.spacex.com/launches/sda-t1tl-a
+CATEGORIES:SpaceX
+GEO:34.6320;-120.6110
+END:VEVENT
+BEGIN:VEVENT
+UID:e0741415-6c63-4236-9736-24a6c04485bc@launch-tracker.local
+DTSTAMP:20261004T173940Z
+DTSTART:20261007T032300Z
+DTEND:20261007T042300Z
+SUMMARY:Nuri | NeonSat-2 to 6
+LOCATION:LC-2\, Naro Space Center\, South Korea\, South Korea
+DESCRIPTION:Rakete: KSLV-2 Nuri\nAnbieter: Korea Aerospace Research Institu
+ te KARI\nMission: NeonSat-2 to 6\nNutzlast: NeonSat-2 to 6\nStatus: Go for
+  Launch\nStartfenster: 20261007T032300Z – 20261007T042300Z UTC
+STATUS:CONFIRMED
+CATEGORIES:Korea Aerospace Research Institute
+GEO:34.4319;127.5351
+END:VEVENT
+BEGIN:VEVENT
+UID:a1bb0984-19d4-4b47-9bba-706d225573e2@launch-tracker.local
+DTSTAMP:20261004T173940Z
+DTSTART:20261009T192000Z
+DTEND:20261009T194900Z
+SUMMARY:Long March 12 | Unknown Payload
+LOCATION:Commercial LC-2\, Wenchang Space Launch Site\, People's Republic o
+ f China\, China
+DESCRIPTION:Rakete: Long March 12\nAnbieter: China Aerospace Science and Te
+ chnology Corporation CASC\nMission: Unknown Payload\nNutzlast: Unknown Pay
+ load\nStatus: Go for Launch\nStartfenster: 20261009T192000Z – 20261009T1
+ 94900Z UTC
+STATUS:CONFIRMED
+CATEGORIES:China Aerospace Science and Technology Corporation
+GEO:19.5975;110.9365
+END:VEVENT
+BEGIN:VEVENT
+UID:97c6f5e1-299e-4652-b72d-9618ac047076@launch-tracker.local
+DTSTAMP:20261004T173940Z
+DTSTART:20261010T230000Z
+DTEND:20261011T030000Z
+SUMMARY:Falcon 9 Block 5 | Starlink Group 15-25
+LOCATION:Space Launch Complex 4E\, Vandenberg SFB\, CA\, USA\, United State
+ s of America
+DESCRIPTION:Rakete: Falcon 9 Block 5\nAnbieter: SpaceX SpX\nMission: Starli
+ nk Group 15-25\nNutzlast: Starlink Group 15-25\nStatus: Go for Launch\nSta
+ rtfenster: 20261010T230000Z – 20261011T030000Z UTC\nÜbertragung: https:
+ //x.com/i/broadcasts/1yKAPwdemygxb\nQuelle: https://www.spacex.com/launche
+ s/sl-15-25
+STATUS:CONFIRMED
+URL:https://www.spacex.com/launches/sl-15-25
+CATEGORIES:SpaceX
+GEO:34.6320;-120.6110
+END:VEVENT
+BEGIN:VEVENT
+UID:bf2c3027-a314-403e-a416-2bfd5d165ad1@launch-tracker.local
+DTSTAMP:20261004T173940Z
+DTSTART:20261013T103344Z
+DTEND:20261013T113344Z
+SUMMARY:Falcon 9 Block 5 | Dragon CRS-2 SpX-35
+LOCATION:Space Launch Complex 40\, Cape Canaveral SFS\, FL\, USA\, United S
+ tates of America
+DESCRIPTION:Rakete: Falcon 9 Block 5\nAnbieter: SpaceX SpX\nMission: Dragon
+  CRS-2 SpX-35\nNutzlast: Dragon CRS-2 SpX-35\nStatus: Go for Launch
+STATUS:CONFIRMED
+CATEGORIES:SpaceX
+GEO:28.5619;-80.5774
+END:VEVENT
+END:VCALENDAR
