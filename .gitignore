@@ -3,6 +3,7 @@ data/*.json
 data/*.json.bak-*
 data/*.json.status.json
 data/*.json.tmp-*
+data/feed.ics
 
 # Vorkomprimierte Varianten der Assets: aus den .js/.css ableitbar, nicht versionieren
 www/**/*.br
@@ -22,5 +23,7 @@ node_modules/
 
 # WICHTIG: www/assets/*.js und *.css sind bewusst NICHT ignoriert.
 # Das sind die ausgelieferten Bundles der App. Der Original-Quellbaum (src/)
-# ist nicht mehr auffindbar; diese Dateien sind die letzte existierende
-# Kopie des Anwendungscodes und muessen im Repo liegen.
+# ist seit 15.11.2025 wiederhergestellt - er liegt in
+# /home/silord/projects/launch-tracker-recovered (siehe HANDOFF.md).
+# Bis dieser Build deployed ist, sind diese Bundles die einzige Kopie
+# des laufenden Anwendungscodes und muessen im Repo liegen.
