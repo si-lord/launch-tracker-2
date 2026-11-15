@@ -145,13 +145,26 @@ function serveFile(req, res, filePath) {
     'cache-control': longLived ? 'public, max-age=31536000, immutable' : 'no-cache',
   }
 
-  // Range-Support (vereinfacht, single range)
+  // Range-Support (vereinfacht, single range).
+  // "bytes=-" liefert leere Zahl -> Number.parseInt('') = NaN -> ERR_OUT_OF_RANGE.
+  // Wir pruefen beide Seiten, bevor sie verrechnet werden.
   const range = req.headers.range
   if (range && /^bytes=\d*-\d*$/.test(range)) {
     const [startStr, endStr] = range.slice(6).split('-')
-    const start = startStr === '' ? Math.max(0, stat.size - Number.parseInt(endStr, 10)) : Number.parseInt(startStr, 10)
-    const end = endStr === '' || Number.isNaN(Number.parseInt(endStr, 10)) ? stat.size - 1 : Number.parseInt(endStr, 10)
-    if (start >= stat.size || end >= stat.size || start > end) {
+    const startNum = startStr === '' ? null : Number.parseInt(startStr, 10)
+    const endNum = endStr === '' ? null : Number.parseInt(endStr, 10)
+    if (
+      (startStr !== '' && !Number.isInteger(startNum)) ||
+      (endStr !== '' && !Number.isInteger(endNum)) ||
+      (startStr === '' && endStr === '')
+    ) {
+      res.writeHead(416, { 'content-range': `bytes */${stat.size}`, ...SECURITY })
+      res.end()
+      return
+    }
+    const start = startNum === null ? Math.max(0, stat.size - endNum) : startNum
+    const end = endNum === null ? stat.size - 1 : endNum
+    if (start >= stat.size || end >= stat.size || start > end || start < 0 || end < 0) {
       res.writeHead(416, { 'content-range': `bytes */${stat.size}`, ...SECURITY })
       res.end()
       return
@@ -163,7 +176,10 @@ function serveFile(req, res, filePath) {
       res.end()
       return
     }
-    createReadStream(filePath, { start, end }).pipe(res)
+    const rangeStream = createReadStream(filePath, { start, end })
+    rangeStream.on('error', () => res.destroy())
+    res.on('close', () => rangeStream.destroy())
+    rangeStream.pipe(res)
     return
   }
 
@@ -198,7 +214,10 @@ function serveFile(req, res, filePath) {
     res.end()
     return
   }
-  createReadStream(filePath).pipe(res)
+  const fileStream = createReadStream(filePath)
+  fileStream.on('error', () => res.destroy())
+  res.on('close', () => fileStream.destroy())
+  fileStream.pipe(res)
 }
 
 /* --------------------------------------------------------- Live-Daten-API */
@@ -320,7 +339,13 @@ const server = createServer((req, res) => {
     sendError(res, 400, 'Bad Request')
     return
   }
-  const url = new URL(req.url, 'http://localhost')
+  let url
+  try {
+    url = new URL(req.url, 'http://localhost')
+  } catch {
+    sendError(res, 400, 'Bad Request')
+    return
+  }
   let decoded
   try {
     decoded = decodeURIComponent(url.pathname)
@@ -371,6 +396,15 @@ const server = createServer((req, res) => {
   }
 
   serveFile(req, res, filePath)
+})
+
+// Letzte Verteidigungslinie: eine unbehandelte Ausnahme darf den Dienst
+// nicht stilllegen. Der Fehler wird geloggt, der Prozess laeuft weiter.
+process.on('uncaughtException', (error) => {
+  console.error('[launch-tracker] unbehandelte Ausnahme:', error)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[launch-tracker] unbehandelte Promise:', reason)
 })
 
 server.listen(PORT, '0.0.0.0', () => {
