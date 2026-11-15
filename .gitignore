@@ -8,6 +8,12 @@ data/*.json.tmp-*
 www/**/*.br
 www/**/*.gz
 
+# Der Kalender-Feed wird aus den Live-Daten erzeugt (scripts/generate-ics.mjs)
+# und liegt in data/ - er darf nicht als statisches File im www-Baum liegen.
+www/feed.ics
+www/feed.ics.br
+www/feed.ics.gz
+
 # Logs / lokale Zustände
 *.log
 *.status.json

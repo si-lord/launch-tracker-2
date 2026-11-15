@@ -45,6 +45,13 @@ const STATUS_FILE = join(DATA_DIR, 'launches.json.status.json')
  *  darf sie aber nicht ueberschreiben. Fehlt die Datei, laeuft die App ohne. */
 const VIDEO_LINK_FILE = join(DATA_DIR, 'video-links.json')
 const VIDEO_STATUS_FILE = join(DATA_DIR, 'video-links.json.status.json')
+/**
+ * Der Kalender-Feed wird bei jedem Datenabgleich aus den Live-Daten neu
+ * erzeugt (scripts/generate-ics.mjs) und liegt deshalb im Datenverzeichnis,
+ * nicht im ausgelieferten www-Baum. Ein statisches File waere sofort
+ * veraltet - das war der Fehler im statischen www/feed.ics.
+ */
+const ICS_FILE = join(DATA_DIR, 'feed.ics')
 
 /** Ab dieser Groesse lohnt sich gzip auf der Leitung. */
 const GZIP_FROM_BYTES = 4096
@@ -222,6 +229,61 @@ function serveFile(req, res, filePath) {
 
 /* --------------------------------------------------------- Live-Daten-API */
 
+/**
+ * Liefert /feed.ics aus dem Datenverzeichnis.
+ *
+ * Fehlt die Datei (noch kein Datenabgleich gelaufen), antwortet der
+ * Endpunkt mit einem leeren, aber gueltigen Kalender. Ein 404 wuerde im
+ * Kalender-Dialog der App als kaputtes Abo erscheinen - ein leerer
+ * Kalender ist ehrlicher: "es stehen gerade keine Termine an".
+ */
+const EMPTY_ICS =
+  'BEGIN:VCALENDAR\r\n' +
+  'VERSION:2.0\r\n' +
+  'PRODID:-//launch-tracker//Raketenstarts//DE\r\n' +
+  'CALSCALE:GREGORIAN\r\n' +
+  'METHOD:PUBLISH\r\n' +
+  'X-WR-CALNAME:Launch-Tracker (Raketenstarts)\r\n' +
+  'X-WR-CALDESC:Geplante Starts im Beobachtungsfenster\r\n' +
+  'END:VCALENDAR\r\n'
+
+function serveIcs(req, res) {
+  const headers = {
+    ...SECURITY,
+    'content-type': MIME['.ics'],
+    'cache-control': 'no-cache',
+  }
+  try {
+    const stat = statSync(ICS_FILE)
+    const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs / 1000).toString(16)}"`
+    headers.etag = etag
+    headers['last-modified'] = new Date(stat.mtimeMs).toUTCString()
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, headers)
+      res.end()
+      return
+    }
+    headers['content-length'] = String(stat.size)
+    res.writeHead(200, headers)
+    if (req.method === 'HEAD') {
+      res.end()
+      return
+    }
+    const stream = createReadStream(ICS_FILE)
+    stream.on('error', () => res.destroy())
+    res.on('close', () => stream.destroy())
+    stream.pipe(res)
+  } catch {
+    headers['content-length'] = String(Buffer.byteLength(EMPTY_ICS))
+    res.writeHead(200, headers)
+    if (req.method === 'HEAD') {
+      res.end()
+      return
+    }
+    res.end(EMPTY_ICS)
+  }
+}
+
 function sendJson(res, status, body, extraHeaders = {}) {
   res.writeHead(status, { 'content-type': MIME['.json'], ...SECURITY, ...extraHeaders })
   res.end(body)
@@ -365,6 +427,10 @@ const server = createServer((req, res) => {
     }
     if (decoded === '/api/health') {
       serveHealth(req, res)
+      return
+    }
+    if (decoded === '/feed.ics') {
+      serveIcs(req, res)
       return
     }
   } else {

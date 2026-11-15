@@ -33,6 +33,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..')
 const FETCH = resolve(HERE, 'fetch-launches.mjs')
+const ICS = resolve(HERE, 'generate-ics.mjs')
 
 const KEEP_BACKUPS = 3
 /** Unterhalb dieses Anteils am alten Stand gilt der Abruf als unvollstaendig. */
@@ -196,6 +197,26 @@ async function runFetch(target) {
   if (code !== 0) fail(`fetch-launches.mjs brach mit Exit-Code ${code} ab.`)
 }
 
+/**
+ * Erzeugt den Kalender-Feed aus den gerade geschriebenen Startdaten.
+ * Ein Fehler ist hier nicht fatal: die Startdaten sind das Wichtigere,
+ * der Feed wird beim naechsten Lauf nachgezogen.
+ */
+async function runIcs() {
+  const args = [ICS, '--data-dir', dirname(OUT)]
+  const code = await new Promise((resolveCode) => {
+    const child = spawn(process.execPath, args, {
+      cwd: ROOT,
+      stdio: 'inherit',
+    })
+    child.on('error', () => resolveCode(1))
+    child.on('close', (value) => resolveCode(value ?? 1))
+  })
+  if (code !== 0) {
+    console.warn('[refresh] WARNUNG: feed.ics konnte nicht erzeugt werden (Exit ' + code + ').')
+  }
+}
+
 async function readStats(file) {
   try {
     const [raw, info] = await Promise.all([readFile(file, 'utf8'), stat(file)])
@@ -294,6 +315,11 @@ async function main() {
     `${JSON.stringify({ ...summary, checked_at: new Date().toISOString(), duration_ms: Date.now() - started }, null, 2)}\n`,
     'utf8',
   )
+
+  // Kalender-Feed aus denselben Daten erzeugen. Er kommt aus dem
+  // Datenverzeichnis, nicht aus dem ausgelieferten www-Baum - sonst
+  // waere er ein statisches File, das veraltet.
+  await runIcs()
 
   console.log(`[refresh] Fertig in ${((Date.now() - started) / 1000).toFixed(1)} s.`)
 }
