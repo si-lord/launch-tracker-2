@@ -216,11 +216,25 @@ export function videoAgeRange(video, now = Date.now()) {
     return { lo: days - 3, hi: days + 3 + PUBLISH_SLACK_DAYS, exact: true };
   }
   // Sonst die Altersangabe aus dem Kanalraster ("2d ago", "2 weeks ago").
+  //
+  // WICHTIG: Diese Angabe galt im Moment des Scrapings, nicht heute. Das
+  // Raster zeigt "2 years ago" auch in einem Jahr noch an. Bezieht man sie
+  // faelschlich auf "jetzt", driftet jede Altersangabe mit der Uhr nach
+  // vorn und die Verknuepfung reisst nach ein paar Wochen still ab
+  // (gemessen: 41 Tage Drift seit dem letzten Backfill).
+  //
+  // Deshalb gilt: veroeffentlicht = first_seen - Alter zur Zeit des
+  // Scrapings. first_seen fehlt nur bei sehr alten Bestandsdaten - dann
+  // bleibt das alte Verhalten (Bezug "jetzt") erhalten.
   const hint = parseAgeHint(video.published_hint ?? video.publishedHint ?? video.when);
   if (!hint) return null;
+  const seen = video.first_seen ? Date.parse(video.first_seen) : Number.NaN;
+  const reference = Number.isFinite(seen) ? seen : now;
+  // Alter des Videos HEUTE: Zeit seit dem Scraping plus der gemeldete Wert.
+  const alterHeute = (now - reference) / 86400000 + hint.days;
   return {
-    lo: hint.days - hint.spread,
-    hi: hint.days + hint.spread + PUBLISH_SLACK_DAYS,
+    lo: alterHeute - hint.spread,
+    hi: alterHeute + hint.spread + PUBLISH_SLACK_DAYS,
     exact: false,
   };
 }

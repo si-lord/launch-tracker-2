@@ -38,6 +38,18 @@ const OUT = argValue('--out')
 const BACKFILL = process.argv.includes('--backfill')
 const DRY_RUN = process.argv.includes('--dry-run')
 const MAX_PAGES = Number.parseInt(argValue('--max-pages') ?? '60', 10)
+/**
+ * Wie viele Seiten der Kanalseite im Rueckfall geholt werden.
+ * Ohne --backfill reichen die ersten Seiten - es geht um frische Videos.
+ */
+const FALLBACK_PAGES = Number.parseInt(argValue('--fallback-pages') ?? '3', 10)
+/**
+ * Rueckfall auf die Kanalseite, wenn der RSS-Feed ausfaellt.
+ * Der Feed-Endpunkt antwortet in dieser Umgebung mit HTTP 404 (fuer alle
+ * Kanaele), die Kanalseite dagegen funktioniert. Ohne diesen Rueckfall
+ * waere die Video-Kette still tot.
+ */
+const NO_GRID_FALLBACK = process.argv.includes('--no-grid-fallback')
 
 /* -------------------------------------------------------------- HTTP */
 
@@ -174,7 +186,7 @@ function collect(root) {
  * Die komplette Videoliste des Kanals. Wechselt die Weboberflaeche ihre
  * Struktur, liefert dieser Weg nichts - der RSS-Feed laeuft trotzdem weiter.
  */
-async function fetchChannelPages() {
+async function fetchChannelPages(maxPages = MAX_PAGES) {
   const html = await getText(`https://www.youtube.com/${CHANNEL.handle}/videos?hl=en&gl=US`)
   const initial = html.match(/var ytInitialData\s*=\s*(\{[\s\S]*?\});\s*<\/script>/)
   if (!initial) throw new Error('ytInitialData nicht gefunden - Struktur der Kanalseite hat sich geaendert.')
@@ -183,7 +195,7 @@ async function fetchChannelPages() {
   let token = [...html.matchAll(/"continuationCommand":\{"token":"([^"]+)"/g)][0]?.[1] ?? null
   let pages = 1
 
-  while (token && pages < MAX_PAGES) {
+  while (token && pages < maxPages) {
     const payload = await postJson(`https://www.youtube.com/youtubei/v1/browse?key=${INNERTUBE_KEY}`, {
       context: CONTEXT,
       continuation: token,
@@ -238,6 +250,26 @@ async function main() {
     console.log('[videos] Rueckwaerts-Abruf uebersprungen (--backfill nicht gesetzt).')
   }
 
+  // Rueckfall: der Feed hat nichts geliefert, aber die Kanalseite ist
+  // erreichbar. Ohne diesen Schritt bliebe die gesamte Video-Kette tot.
+  if (feed.length === 0 && grid.length === 0 && !NO_GRID_FALLBACK) {
+    console.warn(
+      `[videos] RSS lieferte nichts - Rueckfall auf die Kanalliste ` +
+        `(${FALLBACK_PAGES} Seiten${BACKFILL ? ', inklusive Historie' : ''}).`,
+    )
+    try {
+      grid = await fetchChannelPages(FALLBACK_PAGES)
+      console.log(`[videos] Rueckfall erfolgreich: ${grid.length} Videos von der Kanalseite.`)
+      console.warn(
+        '[videos] HINWEIS: Die Altersangaben dieser Videos sind Rasterangaben ' +
+          '("2d ago") ohne exaktes Datum. Sie werden auf den Zeitpunkt des ' +
+          'Scrapings bezogen, nicht auf heute.',
+      )
+    } catch (error) {
+      console.error(`[videos] Auch der Rueckfall auf die Kanalliste schlug fehl: ${error.message}`)
+    }
+  }
+
   // Feed zuerst: er traegt das exakte Datum und gewinnt gegen den Rasterwert.
   const merged = new Map()
   for (const video of grid) merged.set(video.id, video)
@@ -260,6 +292,12 @@ async function main() {
       backfill: BACKFILL,
       video_count: videos.length,
       with_exact_date: videos.filter((v) => v.published_at).length,
+      // 'feed' = RSS mit exaktem Datum, 'grid' = Kanalseite mit Rasterangabe,
+      // 'mixed' = beides. Das sagt dem Betreiber, wie verlaesslich die
+      // Zeitangaben der Verknuepfung sind.
+      source: feed.length > 0 && grid.length > 0 ? 'mixed' : feed.length > 0 ? 'feed' : 'grid',
+      feed_available: feed.length > 0,
+      grid_fallback: feed.length === 0 && grid.length > 0,
     },
     videos,
   }
