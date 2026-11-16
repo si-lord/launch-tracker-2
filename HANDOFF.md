@@ -25,11 +25,23 @@ Der Quellbaum galt als verloren. Er steckte aber im **gelöschten 9000-Bundle**:
 
 Die Parität zum 9001-Stand ist hergestellt und in
 `launch-tracker-recovered/PARITAETS-SPEZIFIKATION.md` dokumentiert.
-Der neue Build liegt in `launch-tracker-recovered/dist/` — **er ist noch nicht deployed.**
 
-**Wichtig:** Der recovered Baum ist ein *anderer* Stand als das 9001-Bundle
-(CSS-Klassen-Overlap nur 6 %). `www/assets/*.js|css` im 9001-Repo bleiben
-die letzte Kopie des laufenden App-Codes, bis der neue Build deployed ist.
+**Stand 2026-11-16: Der neue Build ist deployed und live.**
+- `launch-tracker-recovered` ist das **App-Repo** (GitHub: `si-lord/launch-tracker-2-app`),
+  `launch-tracker-2` (dieses Repo) ist das **Betriebs-/Server-Repo**
+  (GitHub: `si-lord/launch-tracker-2`).
+- Der Browser-Check (`scripts/browser-check.mjs`) prüft die 9001-Klassen
+  und läuft grün (Exit 0).
+- `dist/` aus dem App-Repo wird per `rsync` nach `www/` gespiegelt, danach
+  erzeugt `scripts/precompress.mjs` die `.br`/`.gz`-Sidecars.
+- Live-Bundles: `index-opsUPA4q.js`, `index-CKYaV5RY.css`, `Stage3D-hNuxAYkw.js`
+  (neu ausgeliefert: `leaflet-src`, `world-outline`, Layer-Tiles, Marker-Icon).
+- **PWA-Parität** (Commit `6909fcd` im App-Repo): `sw.js`, `manifest.webmanifest`,
+  `icon-192/512.png` und die SW-Registrierung in `src/main.tsx` waren im
+  wiederhergestellten Baum nicht vorhanden — sie steckten nur minifiziert im
+  alten Bundle. Ohne sie hätte ein Deploy den Offline-Cache (`lt-v1`) zerstört.
+- Der Theme-Umschalter läuft über `data-design` (`dunkel`/`hell`) in
+  `App.tsx` + `Kopfzeile.tsx` — **nicht** über `data-theme`.
 
 ## Deploy
 
@@ -91,13 +103,25 @@ node --test scripts/core.test.mjs     # 15 Tests: Fenster, Video-Alter, iCalenda
 
 ## Nächste sinnvolle Schritte
 
-- **App-Deploy aus `launch-tracker-recovered` vorbereiten** (9001-Parität
-  ist erreicht; der Build ist grün). Vorher: `browser-check.mjs` auf die
-  neuen CSS-Klassen umstellen, dann `dist/` nach `www/` übernehmen und den
-  Deploy-Skript um einen Bundle-Hash-Parameter erweitern.
 - **YouTube Data API v3** statt Grid-Scrape — liefert exakte `publishedAt`
-  statt Rasterangaben. Aufwand ~2–3 h, braucht einen API-Key.
-- **TLS/HTTPS** vor .119 (Caddy/nginx), damit der Service Worker aktiv wird
-  (er braucht einen secure context) und `webcal://` sauber greift.
-- **Monitoring an die Kette hängen**: `/api/health` liefert jetzt 503 bei
-  veralteten Daten — ein Watchdog auf 9001 würde den Ausfall melden.
+  statt Rasterangaben. Aufwand ~2–3 h, **braucht einen API-Key**
+  (`YOUTUBE_API_KEY`; im System ist derzeit keiner hinterlegt). Ohne Key
+  läuft der Grid-Fallback (17 von 35 Starts verknüpft).
+- **App-Weiterentwicklung** gehört ins App-Repo `launch-tracker-recovered`
+  (`si-lord/launch-tracker-2-app`), nicht in dieses Betriebs-Repo.
+
+## TLS und Monitoring (erledigt 2026-11-15/16)
+
+- **nginx** auf .119 terminiert TLS und leitet auf `127.0.0.1:9001` weiter.
+  Der Node-Dienst bindet nur noch an `127.0.0.1` (`HOST` in `server.mjs`),
+  damit es keinen zweiten Weg an TLS und Security-Headern vorbei gibt.
+- **Interne CA** unter `/usr/local/share/si-ct-ca/si-ct-ca.crt` (4096 bit,
+  10 Jahre). Server-Zertifikat mit SAN `silord-home.duckdns.org`,
+  `192.168.11.119`, `127.0.0.1`. Kein Let's Encrypt — die Seite bleibt
+  bewusst LAN-only (NAT ohne Portweiterleitung).
+- **Achtung:** Chromium nutzt einen eigenen CA-Store; die System-CA reicht
+  dort nicht. Browser müssen die CA manuell importieren
+  (Kopie liegt auf .119 unter `/home/silord/WebServer/si-ct-ca.crt`).
+- **Watchdog** `scripts/watchdog.sh` (Cron `*/5 * * * *`): HTTP 200 = gesund,
+  HTTP 503 = Daten veraltet → Dienst neu starten, kein HTTP = tot → neu
+  starten. Log: `/home/silord/launch-tracker-watchdog.log`.
