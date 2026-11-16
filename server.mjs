@@ -504,11 +504,16 @@ process.on('unhandledRejection', (reason) => {
   console.error('[launch-tracker] unbehandelte Promise:', reason)
 })
 
-// Bind-Adresse: standardmaessig nur das Loopback-Interface. Ueber nginx
-// (Port 443) laeuft der Dienst mit TLS; ein direkt erreichbarer HTTP-Port
-// waere ein zweiter Weg an TLS und den Security-Headern vorbei.
-// HOST=0.0.0.0 stellt das alte Verhalten wieder her.
-const HOST = process.env.HOST ?? '127.0.0.1'
+// Bind-Adresse: 0.0.0.0, damit der Dienst direkt aus dem LAN ueber
+// http://<host>:9001 erreichbar ist (der direkte Weg bleibt).
+//
+// Ueber nginx (Port 443) laeuft derselbe Dienst zusaetzlich mit TLS und
+// Security-Headern - der Proxy-Aufbau ist Sache von Ops und laeuft auf
+// 127.0.0.1:9001 weiter, ohne dass hier etwas zu tun ist.
+//
+// HOST=127.0.0.1 bindet den Dienst nur an das Loopback-Interface, wenn
+// ausschliesslich der TLS-Weg genutzt werden soll.
+const HOST = process.env.HOST ?? '0.0.0.0'
 
 server.listen(PORT, HOST, () => {
   console.log(`[launch-tracker] serving ${ROOT} on ${HOST}:${PORT}`)
