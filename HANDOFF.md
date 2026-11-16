@@ -113,8 +113,13 @@ node --test scripts/core.test.mjs     # 15 Tests: Fenster, Video-Alter, iCalenda
 ## TLS und Monitoring (erledigt 2026-11-15/16)
 
 - **nginx** auf .119 terminiert TLS und leitet auf `127.0.0.1:9001` weiter.
-  Der Node-Dienst bindet nur noch an `127.0.0.1` (`HOST` in `server.mjs`),
-  damit es keinen zweiten Weg an TLS und Security-Headern vorbei gibt.
+- **Der Node-Dienst bindet auf `0.0.0.0`** (Default in `server.mjs`,
+  Commit `086e051`). Port 9001 ist damit **direkt aus dem LAN erreichbar**:
+  `http://192.168.11.119:9001/`. Der TLS-Weg via nginx (`:443`) besteht
+  parallel weiter und liefert die Security-Header (CSP, HSTS).
+  Mit `HOST=127.0.0.1` bindet der Dienst nur aufs Loopback-Interface.
+- **Proxy/TLS-Aufbau (nginx, Pihole, HTTPS) ist Aufgabe von Ops** — hier
+  ändert sich nur die Bind-Adresse des Node-Dienstes.
 - **Interne CA** unter `/usr/local/share/si-ct-ca/si-ct-ca.crt` (4096 bit,
   10 Jahre). Server-Zertifikat mit SAN `silord-home.duckdns.org`,
   `192.168.11.119`, `127.0.0.1`. Kein Let's Encrypt — die Seite bleibt
