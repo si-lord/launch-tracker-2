@@ -112,14 +112,24 @@ node --test scripts/core.test.mjs     # 15 Tests: Fenster, Video-Alter, iCalenda
 
 ## TLS und Monitoring (erledigt 2026-11-15/16)
 
-- **nginx** auf .119 terminiert TLS und leitet auf `127.0.0.1:9001` weiter.
 - **Der Node-Dienst bindet auf `0.0.0.0`** (Default in `server.mjs`,
-  Commit `086e051`). Port 9001 ist damit **direkt aus dem LAN erreichbar**:
-  `http://192.168.11.119:9001/`. Der TLS-Weg via nginx (`:443`) besteht
-  parallel weiter und liefert die Security-Header (CSP, HSTS).
-  Mit `HOST=127.0.0.1` bindet der Dienst nur aufs Loopback-Interface.
-- **Proxy/TLS-Aufbau (nginx, Pihole, HTTPS) ist Aufgabe von Ops** — hier
-  ändert sich nur die Bind-Adresse des Node-Dienstes.
+  Commit `086e051`). Port 9001 ist **direkt aus dem LAN erreichbar**:
+  `http://192.168.11.119:9001/`. Mit `HOST=127.0.0.1` bindet der Dienst
+  nur aufs Loopback-Interface.
+- **TLS läuft über Nginx Proxy Manager auf 192.168.150.3** (nicht mehr über
+  nginx auf .119 — die alte Conf liegt als `launch-tracker.conf.disabled-*`
+  in `/etc/nginx/conf.d/`). Proxy-Host 23 in der NPM-Datenbank
+  (`/data/database.sqlite` auf .150.3) zeigt auf `http://192.168.11.119:9001`.
+- **Öffentliche Adresse:** `https://launch-tracker.silord.local/`
+  DNS via Pihole (192.168.150.4) → 192.168.150.3. Zertifikat-ID 23 in NPM
+  (`launch-tracker.silord.local self-signed`), SAN enthält
+  `launch-tracker.silord.local` und `nginx.silord.local`.
+- **Achtung Zertifikat:** NPM-Zertifikate sind **self-signed** (Muster aller
+  Dienste in diesem Proxy). Der Browser muss das NPM-CA importieren, sonst
+  `ERR_CERT_AUTHORITY_INVALID`. Die alte interne CA
+  (`/usr/local/share/si-ct-ca/si-ct-ca.crt`) wird **nicht** mehr verwendet.
+- **Security-Header** kommen weiterhin vom Dienst selbst (CSP, HSTS,
+  X-Frame-Options) und werden von NPM unverändert durchgereicht.
 - **Interne CA** unter `/usr/local/share/si-ct-ca/si-ct-ca.crt` (4096 bit,
   10 Jahre). Server-Zertifikat mit SAN `silord-home.duckdns.org`,
   `192.168.11.119`, `127.0.0.1`. Kein Let's Encrypt — die Seite bleibt
